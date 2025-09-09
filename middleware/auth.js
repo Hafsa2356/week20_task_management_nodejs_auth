@@ -1,21 +1,40 @@
-import jwt from "jsonwebtoken";
+ import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "gkspbxupzghvtggvwiyk";
 
 export const authenticateToken = async (req, res, next) => {
-  try {
-    // TODO: Implement the authentication middleware
-    // 1. Get the token from the request header
-    // 2. Verify the token
-    // 3. Get the user from the database
-    // 4. If the user doesn't exist, throw an error
-    // 5. Attach the user to the request object
-    // 6. Call the next middleware
+       try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Access token required",
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Verify user still exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    req.user = user;
+    next();
 
     
-    
-  } catch (error) {
+      } catch (error) {
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
         success: false,
